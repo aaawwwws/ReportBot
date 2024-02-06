@@ -1,0 +1,44 @@
+use crate::file::{input::Input, uploader::Uploader};
+use auth::logs_key;
+use std::time::Duration;
+use tokio::time::sleep;
+mod auth;
+mod datetime;
+mod dict;
+mod discord;
+mod r#enum;
+mod file;
+mod logs;
+mod request;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    const FILE_PATH: &str = "auth.json";
+    let mut last_report: u64 = 0;
+
+    let auth = logs_key::LogsKey::get_key(FILE_PATH)
+        .await?
+        .read_key(FILE_PATH)
+        .await?;
+
+    let report_id = Input::url_input()?;
+
+    //アップローダーを起動
+    let _ = Uploader.open_uploader()?;
+
+    //エリア情報別ファイルにする予定。
+    let areas = dict::area::Area::new();
+
+    //mainloop
+    loop {
+        if let Some(send_msg) = auth
+            .req_logs(&report_id)
+            .await?
+            .report_handler(&mut last_report, &report_id, &areas)
+            .await?
+        {
+            send_msg.send_msg().await?
+        }
+        sleep(Duration::from_secs(1)).await;
+    }
+}
