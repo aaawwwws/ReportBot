@@ -24,6 +24,10 @@ impl AuthFile {
         let query = QeuryGraphql { query: q };
         let logs = logs::Logs::new(&self.logs_key, &report_id);
         let report = logs.get_report(query).await?;
-        return Ok(ReadReport::new(MsgHandler::new(&self.hook_key), report));
+        return Ok(ReadReport::new(
+            MsgHandler::new(&self.hook_key),
+            report,
+            &self.logs_key,
+        ));
     }
 }

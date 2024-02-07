@@ -15,6 +15,8 @@ mod request;
 async fn main() -> anyhow::Result<()> {
     const FILE_PATH: &str = "auth.json";
     let mut last_report: u64 = 0;
+    //アップローダーを起動
+    let _ = Uploader.open_uploader()?;
 
     let auth = logs_key::LogsKey::get_key(FILE_PATH)
         .await?
@@ -23,18 +25,17 @@ async fn main() -> anyhow::Result<()> {
 
     let report_id = Input::url_input()?;
 
-    //アップローダーを起動
-    let _ = Uploader.open_uploader()?;
-
     //エリア情報別ファイルにする予定。
     let areas = dict::area::Area::new();
+    //job置き換え
+    let job_list = dict::job::Job::new();
 
     //mainloop
     loop {
         if let Some(send_msg) = auth
             .req_logs(&report_id)
             .await?
-            .report_handler(&mut last_report, &report_id, &areas)
+            .report_handler(&mut last_report, &report_id, &areas, &job_list)
             .await?
         {
             send_msg.send_msg().await?

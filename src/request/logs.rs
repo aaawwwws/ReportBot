@@ -7,6 +7,14 @@ pub mod report;
 pub mod report_data;
 pub mod res;
 pub mod zone;
+pub mod rankings;
+pub mod role;
+pub mod tank;
+pub mod healer;
+pub mod dps;
+pub mod character;
+pub mod rankigs_data;
+pub mod datum;
 pub struct Logs {
     secret_key: String,
     report_id: String,
