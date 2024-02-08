@@ -1149,7 +1149,7 @@ dependencies = [
 
 [[package]]
 name = "report_bot"
-version = "0.0.1"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
