@@ -6,7 +6,6 @@ mod auth;
 mod datetime;
 mod dict;
 mod discord;
-mod r#enum;
 mod file;
 mod logs;
 mod request;

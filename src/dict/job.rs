@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-
 pub struct Job {
     job_dict: HashMap<String, String>,
 }
 
 impl Job {
     pub fn new() -> Self {
+        //無駄だな
         let mut job_dict: HashMap<String, String> = HashMap::new();
         job_dict.insert("Astrologian".to_string(), "占".to_string());
         job_dict.insert("Bard".to_string(), "詩人".to_string());
