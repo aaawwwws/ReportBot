@@ -1,6 +1,6 @@
 use crate::{
     datetime::DateTime,
-    dict::{area::Area, job::Job},
+    dict::{area::{Area, AreaName}, area_check::AreaCheck, job::Job},
     request::{
         logs::{
             character::{self, Character},
@@ -40,19 +40,17 @@ impl ReadReport {
         self,
         last_report: &mut u64,
         report_id: &str,
-        areas: &Area,
+        areas: &AreaCheck,
         job_list: &Job,
     ) -> anyhow::Result<Option<SendReport>> {
         let report_data = self.report.get_data().get_report().report_data();
         let report_len = report_data.get_fights().unwrap().len() as u64;
-
         let latest_report = report_data.get_fights().unwrap().last();
         let is_kill = report_data.get_fights().unwrap().last().unwrap().get_kill();
         let area_name = report_data.get_zone().unwrap().get_name().to_string();
-        let area_list = areas.get_areas();
         //レポートデータがない or trush or 現行零式 or 絶じゃないときは早期リターン
         let (unwrap_latest, unwrap_kill) = match (latest_report, is_kill) {
-            (Some(l), Some(k)) if area_list.contains(&area_name) => (l, k),
+            (Some(l), Some(k)) if areas.is_area(&area_name) => (l, k),
             _ => {
                 return Ok(None);
             }
@@ -97,7 +95,12 @@ impl ReadReport {
         Ok(Some(SendReport::new(self.msg_handler, msg)))
     }
 
-    pub async fn req_ranking(&self, report_id: &str, last_fight: u64, job_list: &Job) -> anyhow::Result<String> {
+    pub async fn req_ranking(
+        &self,
+        report_id: &str,
+        last_fight: u64,
+        job_list: &Job,
+    ) -> anyhow::Result<String> {
         let logs = Logs::new(&self.logs_key, report_id);
         let query = format!(
             "{{
@@ -132,11 +135,11 @@ impl ReadReport {
             if str.contains(i.get_name()) {
                 break;
             };
-            let mut job_replace = String::new(); 
-            for (k,v) in job_list.get_dict() {
+            let mut job_replace = String::new();
+            for (k, v) in job_list.get_dict() {
                 if i.get_class().eq(k) {
                     job_replace.push_str(v);
-                    break
+                    break;
                 }
             }
             let player = format!(

@@ -1,20 +1,33 @@
-pub struct Area {
-    array: [String; 6],
+use reqwest::Client;
+use serde::Deserialize;
+
+use super::area_check::AreaCheck;
+
+pub struct AreaList;
+
+impl AreaList {
+    pub async fn area_list() -> anyhow::Result<AreaCheck> {
+        let client = Client::new();
+        let res = client
+            .get("https://raw.githubusercontent.com/aaawwwws/ReportBot/master/area.json")
+            .send()
+            .await?;
+        let result = res.json::<Area>().await?.area;
+        return Ok(AreaCheck::new(result));
+    }
 }
 
-impl Area {
-    pub fn new() -> Self {
-        let array = [
-            String::from("Anabaseios"),
-            String::from("The Omega Protocol"),
-            String::from("Dragonsong's Reprise"),
-            String::from("The Unending Coil of Bahamut"),
-            String::from("The Weapon's Refrain"),
-            String::from("The Epic of Alexander"),
-        ];
-        Self { array }
-    }
-    pub fn get_areas(&self) -> &[String; 6] {
-        &self.array
+#[derive(Debug, Deserialize)]
+pub struct Area {
+    area: Vec<AreaName>,
+}
+#[derive(Debug, Deserialize)]
+pub struct AreaName {
+    name: String,
+}
+
+impl AreaName {
+    pub fn get_name(&self) -> &str {
+        &self.name
     }
 }

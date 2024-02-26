@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     let report_id = Input::url_input()?;
 
     //エリア情報別ファイルにする予定。
-    let areas = dict::area::Area::new();
+    let areas = dict::area::AreaList::area_list().await?;
     //job置き換え
     let job_list = dict::job::Job::new();
 
