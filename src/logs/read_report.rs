@@ -1,6 +1,10 @@
 use crate::{
     datetime::DateTime,
-    dict::{area::{Area, AreaName}, area_check::AreaCheck, job::Job},
+    dict::{
+        area::{Area, AreaName},
+        area_check::AreaCheck,
+        job::Job,
+    },
     request::{
         logs::{
             character::{self, Character},
@@ -47,14 +51,23 @@ impl ReadReport {
         let report_len = report_data.get_fights().unwrap().len() as u64;
         let latest_report = report_data.get_fights().unwrap().last();
         let is_kill = report_data.get_fights().unwrap().last().unwrap().get_kill();
-        let area_name = report_data.get_zone().unwrap().get_name().to_string();
         //レポートデータがない or trush or 現行零式 or 絶じゃないときは早期リターン
         let (unwrap_latest, unwrap_kill) = match (latest_report, is_kill) {
-            (Some(l), Some(k)) if areas.is_area(&area_name) => (l, k),
+            (Some(l), Some(k)) => (l, k),
             _ => {
+                println!("{:?}", latest_report);
                 return Ok(None);
             }
         };
+
+        let Some(last_area) = unwrap_latest.get_name() else {
+            return Ok(None);
+        };
+
+        if !areas.is_area(&last_area) {
+            return Ok(None);
+        }
+
         //更新されていない場合早期リターン
         if report_len <= *last_report {
             return Ok(None);

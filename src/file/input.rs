@@ -49,6 +49,6 @@ impl Input {
             .trim_end_matches("\n")
             .trim_end_matches("\r")
             .to_string();
-        return Ok(report_id);
+        Ok(report_id)
     }
 }

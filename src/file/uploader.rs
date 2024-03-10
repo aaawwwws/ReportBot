@@ -10,7 +10,7 @@ impl Uploader {
             .output()?;
 
         let username = String::from_utf8(output.stdout)?.trim().to_string();
-        return Ok(username);
+        Ok(username)
     }
 
     pub fn open_uploader(&self) -> anyhow::Result<()> {
