@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     datetime::DateTime,
     dict::{
@@ -5,6 +7,8 @@ use crate::{
         area_check::AreaCheck,
         job::Job,
     },
+    graph,
+    logs::report_count,
     request::{
         logs::{
             character::{self, Character},
@@ -42,11 +46,12 @@ impl ReadReport {
 
     pub async fn report_handler(
         self,
-        last_report: &mut u64,
+        last_report: &mut report_count::ReportCount,
         report_id: &str,
         areas: &AreaCheck,
         job_list: &Job,
-    ) -> anyhow::Result<Option<SendReport>> {
+        wipe_vec: &Vec<usize>,
+    ) -> anyhow::Result<(Option<SendReport>, Option<graph::wipe_graph::WipeGraph>)> {
         let report_data = self.report.get_data().get_report().report_data();
         let report_len = report_data.get_fights().unwrap().len() as u64;
         let latest_report = report_data.get_fights().unwrap().last();
@@ -55,25 +60,26 @@ impl ReadReport {
         let (unwrap_latest, unwrap_kill) = match (latest_report, is_kill) {
             (Some(l), Some(k)) => (l, k),
             _ => {
-                println!("{:?}", latest_report);
-                return Ok(None);
+                return Ok((None, None));
             }
         };
 
         let Some(last_area) = unwrap_latest.get_name() else {
-            return Ok(None);
+            return Ok((None, None));
         };
 
         if !areas.is_area(&last_area) {
-            return Ok(None);
+            return Ok((None, None));
         }
 
         //更新されていない場合早期リターン
-        if report_len <= *last_report {
-            return Ok(None);
+        if report_len <= *last_report.get_count() {
+            println!("return {:?}", *last_report);
+            return Ok((None, None));
         }
 
-        *last_report = report_len;
+        *last_report = last_report.set_count(report_len);
+
         let now_dt = DateTime::get_dt();
         let area_name = unwrap_latest.get_name().unwrap();
         let url = format!(
@@ -82,33 +88,35 @@ impl ReadReport {
         );
 
         //killかwipeかでメッセージを変更
-        let msg = match (unwrap_kill, unwrap_latest.get_phase_trasitions()) {
+        let (msg, phase) = match (unwrap_kill, unwrap_latest.get_phase_trasitions()) {
             //kill時
             (true, _) => {
-                format!(
+                (format!(
                 "{}\\n**kill!**\\nエリア(フェーズ):{}\\n{}\\n{}",
-                now_dt, area_name, self.req_ranking(report_id,*last_report, job_list).await?,url)}
+                now_dt, area_name, self.req_ranking(report_id,*last_report.get_count(), job_list).await?,url),None)}
             ,
             //ワイプしてフェーズがない場合
             (false, None) => {
-                format!(
+                (format!(
                     "{}\\n**wipe!**\\nエリア(フェーズ):{}\\n{}",
                     now_dt, area_name, url
-                )
+                ),None)
             }
             //ワイプしてフェーズがある場合
             (false, Some(phase)) => {
-                let p = phase.last().unwrap().get_id();
-                format!(
+                let p = phase.len();
+                //グラフを作る
+                (format!(
                     "{}\\n**wipe!**\\nエリア(フェーズ):{}(P{})\\n{}",
-                    now_dt, area_name, *p, url
-                )
+                    now_dt, area_name, p, url
+                ),Some(graph::wipe_graph::WipeGraph::new(p,&area_name)))
             }
         };
-        Ok(Some(SendReport::new(self.msg_handler, msg)))
+
+        Ok((Some(SendReport::new(self.msg_handler, msg)), phase))
     }
 
-    pub async fn req_ranking(
+    async fn req_ranking(
         &self,
         report_id: &str,
         last_fight: u64,
@@ -143,7 +151,7 @@ impl ReadReport {
         Ok(ranking_data)
     }
 
-    pub fn ranking_str<T: Class>(&self, role: &T, str: &mut String, job_list: &Job) {
+    fn ranking_str<T: Class>(&self, role: &T, str: &mut String, job_list: &Job) {
         for i in role.get_characters() {
             if str.contains(i.get_name()) {
                 break;
